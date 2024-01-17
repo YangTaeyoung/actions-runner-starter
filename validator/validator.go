@@ -2,10 +2,21 @@ package validator
 
 import (
 	"errors"
+	"strconv"
 )
 
 func Positive(ans interface{}) error {
-	if ans.(int) <= 0 {
+	ansStr, ok := ans.(string)
+	if !ok {
+		return errors.New("it must be string")
+	}
+
+	ansInt, err := strconv.Atoi(ansStr)
+	if err != nil {
+		return err
+	}
+
+	if ansInt <= 0 {
 		return errors.New("it must be positive")
 	}
 
