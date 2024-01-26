@@ -246,7 +246,6 @@ func (r *Runner) Unregister() error {
 	}
 
 	// 폴더 내 액션 러너 디렉토리 리스트 가져오기
-	runnersPath := path.Join(os.Getenv("HOME"), "actions-runners")
 	runnerDirs, err := file.RunnerDirs(runnersPath)
 	if err != nil {
 		return err
@@ -254,11 +253,33 @@ func (r *Runner) Unregister() error {
 
 	// 액션 러너 등록 해제 및 폴더 삭제
 	for _, runnerDir := range runnerDirs {
+		var (
+			stderr io.ReadCloser
+		)
 		runnerPath := path.Join(runnersPath, runnerDir)
 
 		// Github 에서 러너 등록 해제
-		cmd := exec.Command(runnerPath+"/config.sh", "remove", "--token", r.config.GithubToken)
-		if err = cmd.Run(); err != nil {
+		cmd := exec.Command(path.Join(runnerPath, "config.sh"), "remove", "--token", r.config.GithubToken)
+
+		stderr, err = cmd.StderrPipe()
+		if err != nil {
+			return err
+		}
+
+		if err = cmd.Start(); err != nil {
+			return err
+		}
+
+		errByte, err := io.ReadAll(stderr)
+		if err != nil {
+			return err
+		}
+		if errByte != nil {
+			return errors.New(string(errByte))
+		}
+
+		err = cmd.Wait()
+		if err != nil {
 			return err
 		}
 
